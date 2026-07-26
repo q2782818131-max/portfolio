@@ -232,9 +232,15 @@ body.lightbox-open{overflow:hidden}
   <div class="detail-container">
     <div class="detail-back" onclick="closeDetail()">← 返回作品集</div>
     <div class="detail-header" id="detail-header"></div>
-    <div class="detail-gallery" id="detail-gallery">
-      <p class="text-white/20 text-sm text-center col-span-full py-12">加载中...</p>
+    <div id="detail-video-section" style="margin-bottom:32px">
+      <p class="text-[10px] tracking-[0.2em] text-accent/60 uppercase mb-4 font-mono">▎视频</p>
+      <div class="detail-gallery" id="detail-gallery-videos"></div>
     </div>
+    <div id="detail-image-section">
+      <p class="text-[10px] tracking-[0.2em] text-accent/60 uppercase mb-4 font-mono">▎图片</p>
+      <div class="detail-gallery" id="detail-gallery-images"></div>
+    </div>
+    <p class="text-white/15 text-sm text-center col-span-full py-12" id="detail-empty" style="display:none">暂无作品素材</p>
     <div class="detail-upload-zone" id="detail-upload" style="display:none" onclick="document.getElementById('detail-file-input').click()">
       <p>＋ 上传图片或视频（拖拽或点击）</p>
       <input type="file" id="detail-file-input" multiple accept="image/*,video/*" style="display:none" onchange="uploadMedia()">
@@ -726,22 +732,34 @@ window.closeDetail = function(){
 };
 
 async function loadMedia(){
-  const gallery = document.getElementById('detail-gallery');
-  gallery.innerHTML = '<p class="text-white/20 text-sm text-center col-span-full py-12">加载中...</p>';
+  const vGallery = document.getElementById('detail-gallery-videos');
+  const iGallery = document.getElementById('detail-gallery-images');
+  const empty = document.getElementById('detail-empty');
+  vGallery.innerHTML = '<p class="text-white/20 text-sm text-center col-span-full py-8">加载中...</p>';
+  iGallery.innerHTML = '';
+
   const res = await api(`/api/works/${currentWorkId}/media`);
+  const videos = res.filter(m=>m.type==='video');
+  const images = res.filter(m=>m.type==='image');
+
   if(!res.length){
-    gallery.innerHTML = '<p class="text-white/15 text-sm text-center col-span-full py-16">暂无作品素材</p>';
+    vGallery.innerHTML = ''; iGallery.innerHTML = '';
+    empty.style.display = 'block';
     return;
   }
-  gallery.innerHTML = res.map(m => `
+  empty.style.display = 'none';
+
+  const cardHTML = m => `
     <div class="detail-media-card" onclick="openMediaLB('${m.url}','${m.type}')">
       ${m.type==='video'
         ? `<video src="${m.url}" muted loop playsinline onmouseenter="this.play()" onmouseleave="this.pause()"></video>`
         : `<img src="${m.url}" alt="" loading="lazy">`
       }
       ${isAdmin ? `<button class="media-delete" onclick="event.stopPropagation();deleteMedia('${m.id}')" title="删除">✕</button>` : ''}
-    </div>
-  `).join('');
+    </div>`;
+
+  vGallery.innerHTML = videos.length ? videos.map(cardHTML).join('') : '<p class="text-white/15 text-sm col-span-full py-4">暂无视频</p>';
+  iGallery.innerHTML = images.length ? images.map(cardHTML).join('') : '<p class="text-white/15 text-sm col-span-full py-4">暂无图片</p>';
 }
 
 window.uploadMedia = async function(){
