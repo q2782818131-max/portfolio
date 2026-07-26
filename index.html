@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>丘天财 — 创意设计师 / 3D 动画师 / AI 工具开发者</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      colors: { dark: '#0a0a0e', accent: '#8ab4f8', 'accent-dim': '#5f8cd0' },
+      fontFamily: {
+        sans: ['"Inter"','"SF Pro Display"','"PingFang SC"','"Microsoft YaHei"', 'sans-serif'],
+        mono: ['"JetBrains Mono"','"Fira Code"','monospace'],
+      }
+    }
+  }
+}
+</script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth;background:#0a0a0e}
+body{margin:0;padding:0;font-family:'Inter','SF Pro Display','PingFang SC','Microsoft YaHei',sans-serif;background:#0a0a0e;color:#e0e0e0;overflow-x:hidden;cursor:none;-webkit-font-smoothing:antialiased}
+body.lightbox-open{overflow:hidden}
+::selection{background:rgba(138,180,248,0.3);color:#fff}
+
+#cursor{position:fixed;top:0;left:0;width:28px;height:28px;border:1.5px solid rgba(138,180,248,0.6);border-radius:50%;pointer-events:none;z-index:9999;transform:translate(-50%,-50%);transition:width .35s cubic-bezier(.25,.8,.25,1.2),height .35s cubic-bezier(.25,.8,.25,1.2),border-color .35s,background .35s;mix-blend-mode:difference}
+#cursor-dot{position:fixed;top:0;left:0;width:4px;height:4px;background:#8ab4f8;border-radius:50%;pointer-events:none;z-index:10000;transform:translate(-50%,-50%);transition:width .25s,height .25s,background .25s}
+#cursor.hover{width:64px;height:64px;border-color:rgba(138,180,248,0.9);background:rgba(138,180,248,0.08);mix-blend-mode:normal}
+#cursor-dot.hover{width:6px;height:6px;background:#fff}
+
+#particle-canvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none}
+.content-layer{position:relative;z-index:1}
+
+.section-label{font-family:'JetBrains Mono','Fira Code',monospace;font-size:11px;font-weight:500;letter-spacing:.2em;text-transform:uppercase;color:rgba(138,180,248,0.7);margin-bottom:16px}
+.hero-title{font-size:clamp(36px,6.5vw,80px);font-weight:900;line-height:1.05;letter-spacing:-.03em}
+.hero-title .line{display:block;overflow:hidden}
+.hero-title .line .word{display:inline-block;transform:translateY(100%)}
+
+.magnetic-btn{position:relative;display:inline-flex;align-items:center;justify-content:center;gap:10px;padding:16px 40px;font-size:14px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#e0e0e0;background:transparent;border:1px solid rgba(138,180,248,0.35);border-radius:100px;cursor:none;transition:all .3s ease;overflow:hidden}
+.magnetic-btn::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at center,rgba(138,180,248,0.15) 0%,transparent 70%);opacity:0;transition:opacity .4s}
+.magnetic-btn:hover::before{opacity:1}
+.magnetic-btn:hover{border-color:rgba(138,180,248,0.7);color:#fff;box-shadow:0 0 40px rgba(138,180,248,0.15)}
+
+.skill-tag{display:inline-block;padding:8px 18px;font-size:13px;font-weight:500;letter-spacing:.04em;color:#b0b0b0;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:100px;transition:all .35s;cursor:none}
+.skill-tag:hover{color:#fff;background:rgba(138,180,248,0.12);border-color:rgba(138,180,248,0.35);box-shadow:0 0 20px rgba(138,180,248,0.08)}
+
+.social-link{display:flex;align-items:center;justify-content:center;width:44px;height:44px;border:1px solid rgba(255,255,255,0.1);border-radius:50%;color:#999;transition:all .35s}
+.social-link:hover{color:#8ab4f8;border-color:rgba(138,180,248,0.4);background:rgba(138,180,248,0.06);box-shadow:0 0 24px rgba(138,180,248,0.12)}
+
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.08);border-radius:4px}
+
+.work-card{perspective:1200px;cursor:none}
+.work-card-inner{position:relative;background:rgba(255,255,255,0.03);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1px solid rgba(255,255,255,0.07);border-radius:20px;overflow:hidden;transition:box-shadow .5s,border-color .5s;transform-style:preserve-3d;will-change:transform}
+.work-media{position:relative;width:100%;aspect-ratio:16/9;overflow:hidden;background:#0d0d14}
+.work-poster{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:1;z-index:2;transition:opacity .6s cubic-bezier(.25,.8,.25,1)}
+.work-video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;z-index:1;transition:opacity .6s cubic-bezier(.25,.8,.25,1)}
+.work-card:hover .work-poster{opacity:0}
+.work-card:hover .work-video{opacity:1}
+
+.work-card-glow{position:absolute;inset:0;border-radius:20px;pointer-events:none;z-index:5;opacity:0;transition:opacity .5s}
+.work-card-glow::before{content:'';position:absolute;inset:-2px;border-radius:22px;background:conic-gradient(from var(--glow-angle,0deg),transparent 0deg,rgba(138,180,248,0.5) 40deg,rgba(180,210,255,0.7) 80deg,transparent 120deg,transparent 180deg,rgba(138,180,248,0.4) 220deg,rgba(160,200,245,0.6) 260deg,transparent 300deg,transparent 360deg);mask:radial-gradient(farthest-side,transparent calc(100% - 3px),#000 calc(100% - 2px));-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 3px),#000 calc(100% - 2px));animation:glow-rotate 4s linear infinite}
+@keyframes glow-rotate{from{--glow-angle:0deg}to{--glow-angle:360deg}}
+@property --glow-angle{syntax:'<angle>';initial-value:0deg;inherits:false}
+.work-card:hover .work-card-glow{opacity:1}
+.work-card:hover .work-card-inner{border-color:rgba(138,180,248,0.2);box-shadow:0 24px 64px rgba(0,0,0,0.6),0 0 40px rgba(138,180,248,0.08)}
+
+.work-info{position:relative;z-index:3;padding:24px 28px 28px}
+.work-play-icon{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:52px;height:52px;border-radius:50%;background:rgba(0,0,0,0.55);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;z-index:4;transition:all .4s;opacity:0}
+.work-play-icon svg{width:18px;height:18px;color:#fff;margin-left:2px}
+.work-card:hover .work-play-icon{opacity:0;transform:translate(-50%,-50%) scale(0.8)}
+
+.tool-card{background:rgba(255,255,255,0.025);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,0.06);border-radius:16px;padding:28px;transition:all .4s}
+.tool-card:hover{background:rgba(255,255,255,0.05);border-color:rgba(138,180,248,0.2);box-shadow:0 12px 40px rgba(0,0,0,0.4),0 0 20px rgba(138,180,248,0.06);transform:translateY(-2px)}
+.tool-icon{width:40px;height:40px;border-radius:10px;background:rgba(138,180,248,0.1);border:1px solid rgba(138,180,248,0.2);display:flex;align-items:center;justify-content:center;font-size:18px;margin-bottom:16px}
+
+.lightbox{position:fixed;inset:0;z-index:10001;background:rgba(5,5,10,0.92);backdrop-filter:blur(20px);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .4s}
+.lightbox.active{opacity:1;pointer-events:auto}
+.lightbox-media{max-width:90vw;max-height:85vh;border-radius:12px;overflow:hidden;box-shadow:0 0 80px rgba(138,180,248,0.12);background:#000;position:relative}
+.lightbox-media img,.lightbox-media video{display:block;max-width:90vw;max-height:85vh}
+.lightbox-close{position:fixed;top:24px;right:28px;width:44px;height:44px;border:1px solid rgba(255,255,255,0.15);border-radius:50%;background:rgba(0,0,0,0.4);backdrop-filter:blur(12px);color:#fff;font-size:22px;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:10002;transition:all .3s}
+.lightbox-close:hover{border-color:rgba(138,180,248,0.5);background:rgba(138,180,248,0.1);box-shadow:0 0 20px rgba(138,180,248,0.2)}
+.lightbox-title{position:fixed;bottom:32px;left:50%;transform:translateX(-50%);color:rgba(255,255,255,0.6);font-size:13px;letter-spacing:.06em;z-index:10002}
+
+/* ── Detail View ── */
+.detail-overlay{position:fixed;inset:0;z-index:20000;background:rgba(5,5,12,0.95);backdrop-filter:blur(24px);overflow-y:auto;opacity:0;pointer-events:none;transition:opacity .4s;cursor:auto}
+.detail-overlay.active{opacity:1;pointer-events:auto}
+.detail-container{max-width:1100px;margin:0 auto;padding:60px 24px 80px;cursor:auto}
+.detail-header{margin-bottom:40px}
+.detail-gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin-bottom:40px}
+.detail-media-card{position:relative;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:12px;overflow:hidden;aspect-ratio:16/9;cursor:pointer;transition:all .3s}
+.detail-media-card:hover{border-color:rgba(138,180,248,0.3);box-shadow:0 8px 32px rgba(0,0,0,0.5)}
+.detail-media-card img,.detail-media-card video{width:100%;height:100%;object-fit:cover}
+.detail-media-card .media-delete{position:absolute;top:6px;right:6px;width:26px;height:26px;border-radius:50%;background:rgba(0,0,0,0.7);border:1px solid rgba(255,255,255,0.2);color:#e74c3c;font-size:12px;display:none;align-items:center;justify-content:center;cursor:pointer;z-index:5}
+.detail-media-card:hover .media-delete{display:flex}
+.detail-upload-zone{border:2px dashed rgba(255,255,255,0.12);border-radius:12px;padding:40px;text-align:center;cursor:pointer;transition:all .3s;margin-bottom:40px}
+.detail-upload-zone:hover{border-color:rgba(138,180,248,0.4);background:rgba(138,180,248,0.04)}
+.detail-upload-zone p{color:rgba(255,255,255,0.4);font-size:13px}
+.detail-back{display:inline-flex;align-items:center;gap:8px;color:rgba(255,255,255,0.5);font-size:13px;cursor:pointer;margin-bottom:24px;transition:color .3s}
+.detail-back:hover{color:#8ab4f8}
+
+/* ── Login / Admin ── */
+.login-btn{position:fixed;top:16px;right:20px;z-index:100;font-size:18px;width:36px;height:36px;border-radius:50%;border:1px solid rgba(255,255,255,0.1);background:rgba(0,0,0,0.5);backdrop-filter:blur(8px);color:#999;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .3s}
+.login-btn:hover{color:#8ab4f8;border-color:rgba(138,180,248,0.4)}
+.login-btn.logged{color:#27ae60;border-color:rgba(39,174,96,0.4)}
+
+.modal-overlay{position:fixed;inset:0;z-index:20000;background:rgba(0,0,0,0.8);backdrop-filter:blur(12px);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .3s;cursor:auto}
+.modal-overlay.active{opacity:1;pointer-events:auto}
+.modal-box{background:#14141e;border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:32px;width:460px;max-width:90vw;box-shadow:0 24px 80px rgba(0,0,0,0.6);cursor:auto}
+.modal-box h3{font-size:18px;font-weight:700;margin:0 0 20px;color:#fff}
+.modal-box input,.modal-box textarea,.modal-box select{width:100%;padding:10px 14px;margin-bottom:12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);border-radius:8px;color:#e0e0e0;font-size:13px;font-family:inherit;outline:none;transition:border-color .3s;cursor:text}
+.modal-box input:focus,.modal-box textarea:focus,.modal-box select:focus{border-color:rgba(138,180,248,0.5)}
+.modal-box textarea{resize:vertical;min-height:80px}
+.modal-box label{display:block;font-size:11px;color:rgba(255,255,255,0.5);margin-bottom:4px;text-transform:uppercase;letter-spacing:.08em}
+.modal-box .btn-row{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+.modal-box button{padding:10px 22px;border-radius:8px;font-size:13px;font-weight:600;border:none;cursor:pointer;transition:all .3s}
+.btn-primary{background:#8ab4f8;color:#0a0a0e}
+.btn-primary:hover{background:#a0c8ff}
+.btn-danger{background:rgba(231,76,60,0.2);color:#e74c3c;border:1px solid rgba(231,76,60,0.3)}
+.btn-danger:hover{background:rgba(231,76,60,0.35)}
+.btn-ghost{background:transparent;color:#999;border:1px solid rgba(255,255,255,0.12)}
+.btn-ghost:hover{color:#fff;border-color:rgba(255,255,255,0.3)}
+
+.admin-bar{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:99;display:flex;gap:8px;opacity:0;pointer-events:none;transition:opacity .3s}
+.admin-bar.active{opacity:1;pointer-events:auto}
+.admin-bar button{padding:8px 18px;border-radius:100px;font-size:12px;font-weight:600;border:1px solid rgba(255,255,255,0.15);background:rgba(0,0,0,0.7);backdrop-filter:blur(12px);color:#e0e0e0;cursor:pointer;transition:all .3s;display:flex;align-items:center;gap:6px}
+.admin-bar button:hover{border-color:rgba(138,180,248,0.5);color:#fff}
+
+.card-admin-actions{position:absolute;top:8px;right:8px;z-index:10;display:none;gap:6px}
+.card-admin-actions.active{display:flex}
+.card-admin-actions button{width:28px;height:28px;border-radius:50%;border:1px solid rgba(255,255,255,0.2);background:rgba(0,0,0,0.7);backdrop-filter:blur(8px);color:#ccc;font-size:12px;display:flex;align-items:center;justify-content:center;cursor:none;transition:all .3s}
+.card-admin-actions button:hover{color:#fff;border-color:#fff}
+.card-admin-actions .btn-del:hover{background:rgba(231,76,60,0.6);border-color:#e74c3c}
+
+#works-grid{min-height:200px}
+
+@media(max-width:768px){
+  .magnetic-btn{padding:14px 32px;font-size:12px}
+  .work-card-inner,.tool-card{border-radius:14px}
+  .work-info{padding:18px 20px 22px}
+  body{cursor:auto}
+  #cursor,#cursor-dot{display:none}
+  .lightbox-media video{min-width:auto;width:100%}
+  .lightbox-close{top:16px;right:16px;width:38px;height:38px}
+}
+</style>
+</head>
+<body>
+
+<div id="cursor"></div>
+<div id="cursor-dot"></div>
+<canvas id="particle-canvas"></canvas>
+
+<!-- Login button -->
+<button class="login-btn" id="login-btn" title="管理登录">🔑</button>
+
+<!-- Admin bar -->
+<div class="admin-bar" id="admin-bar">
+  <button onclick="openAddModal()">＋ 添加作品</button>
+  <button onclick="openEditModal(null,'tools')">＋ 添加工具</button>
+  <button onclick="apiLogout()">🚪 退出</button>
+</div>
+
+<!-- Login modal -->
+<div class="modal-overlay" id="login-modal">
+  <div class="modal-box">
+    <h3>🔐 管理员登录</h3>
+    <input type="password" id="login-password" placeholder="请输入管理密码" onkeydown="if(event.key==='Enter')doLogin()">
+    <p id="login-error" style="color:#e74c3c;font-size:12px;display:none;margin:4px 0"></p>
+    <div class="btn-row">
+      <button class="btn-ghost" onclick="closeModal('login-modal')">取消</button>
+      <button class="btn-primary" onclick="doLogin()">登录</button>
+    </div>
+  </div>
+</div>
+
+<!-- Work edit modal -->
+<div class="modal-overlay" id="work-modal">
+  <div class="modal-box">
+    <h3 id="work-modal-title">添加作品</h3>
+    <input type="hidden" id="work-edit-id">
+    <label>标题</label><input type="text" id="work-title" placeholder="作品标题">
+    <label>分类</label><input type="text" id="work-category" placeholder="01 / 3D 动画">
+    <label>描述</label><textarea id="work-desc" placeholder="作品描述..."></textarea>
+    <label>标签（逗号分隔）</label><input type="text" id="work-tags" placeholder="Blender, 建模, 灯光渲染">
+    <label>主题色</label><input type="text" id="work-color" placeholder="#8ab4f8">
+    <label>封面图片</label><input type="file" id="work-image" accept="image/*">
+    <label>视频（可选）</label><input type="file" id="work-video-file" accept="video/*">
+    <input type="text" id="work-video-url" placeholder="或填入视频URL">
+    <div class="btn-row">
+      <button class="btn-ghost" onclick="closeModal('work-modal')">取消</button>
+      <button class="btn-primary" id="work-save-btn" onclick="saveWork()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- Tool edit modal -->
+<div class="modal-overlay" id="tool-modal">
+  <div class="modal-box">
+    <h3 id="tool-modal-title">添加工具</h3>
+    <input type="hidden" id="tool-edit-id">
+    <label>图标 emoji</label><input type="text" id="tool-icon" placeholder="🎬">
+    <label>工具名称</label><input type="text" id="tool-title" placeholder="工具名称">
+    <label>描述</label><textarea id="tool-desc" placeholder="工具描述..."></textarea>
+    <label>技术标签（逗号分隔）</label><input type="text" id="tool-tags" placeholder="DeepSeek API, tkinter, 12MB EXE">
+    <div class="btn-row">
+      <button class="btn-ghost" onclick="closeModal('tool-modal')">取消</button>
+      <button class="btn-primary" id="tool-save-btn" onclick="saveTool()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ LIGHTBOX ═══════════ -->
+<div class="lightbox" id="lightbox">
+  <button class="lightbox-close" id="lightbox-close" title="关闭 (ESC)">✕</button>
+  <div class="lightbox-media" id="lightbox-media"></div>
+  <div class="lightbox-title" id="lightbox-title"></div>
+</div>
+
+<!-- ═══════════ WORK DETAIL ═══════════ -->
+<div class="detail-overlay" id="detail-overlay">
+  <button class="lightbox-close" onclick="closeDetail()" title="关闭 (ESC)">✕</button>
+  <div class="detail-container">
+    <div class="detail-back" onclick="closeDetail()">← 返回作品集</div>
+    <div class="detail-header" id="detail-header"></div>
+    <div class="detail-gallery" id="detail-gallery">
+      <p class="text-white/20 text-sm text-center col-span-full py-12">加载中...</p>
+    </div>
+    <div class="detail-upload-zone" id="detail-upload" style="display:none" onclick="document.getElementById('detail-file-input').click()">
+      <p>＋ 上传图片或视频（拖拽或点击）</p>
+      <input type="file" id="detail-file-input" multiple accept="image/*,video/*" style="display:none" onchange="uploadMedia()">
+    </div>
+  </div>
+</div>
+
+<main class="content-layer">
+
+  <!-- ═══════════ HERO ═══════════ -->
+  <section id="hero" class="relative min-h-screen flex items-center justify-center px-6 md:px-12">
+    <div class="max-w-5xl w-full mx-auto text-center">
+      <p class="section-label opacity-0" data-anim="fade-up">📍 广东河源 · 全球远程协作 · 一周五天四个月及以上</p>
+      <h1 class="hero-title mt-6 mb-4">
+        <span class="line"><span class="word">丘天财</span></span>
+        <span class="line"><span class="word">创意设计师</span></span>
+        <span class="line text-accent"><span class="word">&amp; AI 工具开发者</span></span>
+      </h1>
+      <p class="text-lg md:text-xl text-white/50 font-light max-w-2xl mx-auto mt-8 mb-12 opacity-0" data-anim="fade-up">
+        3D 动画 × AIGC 工作流 × 独立工具链开发<br>从 Blender 到 Claude Agent，用代码放大创意的边界。
+      </p>
+      <div class="flex flex-wrap justify-center gap-3 mb-12 opacity-0" data-anim="fade-up">
+        <span class="skill-tag">Blender</span><span class="skill-tag">Unreal Engine 5</span><span class="skill-tag">After Effects</span>
+        <span class="skill-tag">Stable Diffusion</span><span class="skill-tag">ComfyUI</span><span class="skill-tag">Claude Agent</span>
+        <span class="skill-tag">DeepSeek API</span><span class="skill-tag">Python</span><span class="skill-tag">JavaScript</span>
+      </div>
+      <div class="opacity-0" data-anim="fade-up">
+        <a href="#works" class="magnetic-btn" data-magnetic>查看作品<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a>
+      </div>
+    </div>
+    <div class="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 opacity-0" data-anim="fade-up">
+      <span class="text-[10px] tracking-[0.2em] text-white/30 uppercase">向下滚动</span>
+      <div class="w-[1px] h-8 bg-gradient-to-b from-white/30 to-transparent"></div>
+    </div>
+  </section>
+
+  <!-- ═══════════ WORKS ═══════════ -->
+  <section id="works" class="relative px-6 md:px-12 py-24 md:py-32">
+    <div class="max-w-6xl mx-auto">
+      <p class="section-label text-center" data-anim="fade-up">精选作品</p>
+      <h2 class="text-4xl md:text-5xl font-bold text-center mb-4 tracking-tight" data-anim="fade-up">跨领域<span class="text-accent">项目</span></h2>
+      <p class="text-white/30 text-sm text-center mb-16" data-anim="fade-up">Blender 科幻 · UE5 实时场景 · AIGC 生成 · AE 动效 · 游戏买量 · 信息流剪辑</p>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8" id="works-grid">
+        <p class="text-white/20 text-sm col-span-full text-center py-12">加载中...</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ AI 工具链 ═══════════ -->
+  <section id="tools" class="relative px-6 md:px-12 py-24 md:py-32 border-t border-white/[0.04]">
+    <div class="max-w-6xl mx-auto">
+      <p class="section-label text-center" data-anim="fade-up">自研 AI 工具链</p>
+      <h2 class="text-4xl md:text-5xl font-bold text-center mb-4 tracking-tight" data-anim="fade-up">Vibe Coding <span class="text-accent">实战产出</span></h2>
+      <p class="text-white/30 text-sm text-center mb-16 max-w-2xl mx-auto" data-anim="fade-up">独立设计并开发 10+ 桌面 EXE 工具，覆盖创意→生成→剪辑→去重→发布的完整工作流。Claude Agent + DeepSeek API + PyInstaller 打包，U 盘即走，无需 Python 环境。</p>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5" id="tools-grid"></div>
+    </div>
+  </section>
+
+  <!-- ═══════════ ABOUT ═══════════ -->
+  <section id="about" class="relative px-6 md:px-12 py-24 md:py-32 border-t border-white/[0.04]">
+    <div class="max-w-5xl mx-auto">
+      <div class="grid grid-cols-1 md:grid-cols-5 gap-12 md:gap-16">
+        <div class="md:col-span-3" data-anim="fade-up">
+          <p class="section-label">关于我</p>
+          <h2 class="text-3xl md:text-4xl font-bold mb-8 tracking-tight">从<span class="text-accent">科幻梦想</span>到<br>可落地的视觉管线。</h2>
+          <div class="space-y-4 text-white/50 text-sm leading-relaxed">
+            <p>湛江科技学院数字媒体技术专业 2026 届应届毕业生，热爱科幻动画与概念设计。在校期间系统学习游戏开发（Unity/UE5）、计算机视觉、影视动画与数字内容制作。</p>
+            <p>实习期间负责抖音、小红书账号视觉内容制作（PR/AE），单条视频最高 15W+ 播放，账号整体阅读量提升 100%。第十届世界渲染大赛参赛者，独立完成三维科幻场景设计与渲染。</p>
+            <p>当前从事游戏买量 UA 视频制作，日产 6 条信息流前贴，面向 30-40 岁核心受众。在此过程中独立开发了 10+ 桌面效率工具——从文案生成、创意分镜、提示词优化到批量混剪、去重发布，形成完整自研工具链。</p>
+            <p>核心信念：<span class="text-accent">AI 是创意的编译器，人是审美的决策者。</span>不追求成为提示词工程师，而是积累可迁移的视觉判断力与工具化思维。</p>
+          </div>
+        </div>
+        <div class="md:col-span-2 space-y-6" data-anim="fade-up">
+          <div class="tool-card"><p class="text-[10px] tracking-[0.2em] text-accent/60 uppercase mb-3 font-mono">教育背景</p><p class="font-semibold text-sm">湛江科技学院</p><p class="text-white/40 text-xs">数字媒体技术 · 2022.09 – 2026.06</p><p class="text-white/30 text-xs mt-1">主修：游戏开发 · 计算机视觉 · 影视动画 · 数字内容制作</p></div>
+          <div class="tool-card"><p class="text-[10px] tracking-[0.2em] text-accent/60 uppercase mb-3 font-mono">实习经历</p><p class="font-semibold text-sm">广东省序学教育咨询有限公司</p><p class="text-white/40 text-xs">内容运营 · 2025.06 – 2025.08</p><p class="text-white/30 text-xs mt-1">抖音/小红书视觉内容制作与策略优化</p></div>
+          <div class="tool-card"><p class="text-[10px] tracking-[0.2em] text-accent/60 uppercase mb-3 font-mono">竞赛经历</p><p class="font-semibold text-sm">第十届世界渲染大赛</p><p class="text-white/40 text-xs">参赛作品 · Blender 三维科幻场景</p></div>
+          <a href="https://ncn9ris1exex.feishu.cn/wiki/IR2pw5jCkilEdfkwBimciTAdnrg" target="_blank" rel="noopener" class="tool-card block text-center hover:border-accent/30 transition-all group cursor-none"><p class="text-sm font-semibold group-hover:text-accent transition-colors">📂 完整作品集（飞书文档）</p><p class="text-white/30 text-xs mt-1">点击查看建模/渲染/AIGC/动画全部作品</p></a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ SKILLS ═══════════ -->
+  <section id="skills" class="relative px-6 md:px-12 py-24 md:py-32 border-t border-white/[0.04]">
+    <div class="max-w-5xl mx-auto">
+      <p class="section-label text-center" data-anim="fade-up">核心能力</p>
+      <h2 class="text-3xl md:text-4xl font-bold text-center mb-16 tracking-tight" data-anim="fade-up">技能<span class="text-accent">矩阵</span></h2>
+      <div class="mb-12" data-anim="fade-up"><p class="text-xs tracking-[0.15em] text-accent/50 uppercase mb-4 font-mono">▎三维与引擎</p><div class="flex flex-wrap gap-3"><span class="skill-tag">Blender</span><span class="skill-tag">Unreal Engine 5</span><span class="skill-tag">Unity</span><span class="skill-tag">Lumen / Nanite</span><span class="skill-tag">建模 · 材质 · 灯光</span><span class="skill-tag">镜头运动设计</span><span class="skill-tag">场景构图</span></div></div>
+      <div class="mb-12" data-anim="fade-up"><p class="text-xs tracking-[0.15em] text-accent/50 uppercase mb-4 font-mono">▎AIGC 工作流</p><div class="flex flex-wrap gap-3"><span class="skill-tag">Stable Diffusion</span><span class="skill-tag">ComfyUI</span><span class="skill-tag">ControlNet / LoRA</span><span class="skill-tag">Seedance 2.0</span><span class="skill-tag">Image-to-Video</span><span class="skill-tag">AI 提示词工程</span><span class="skill-tag">7 维视听语言框架</span><span class="skill-tag">电影心理操控体系</span></div></div>
+      <div class="mb-12" data-anim="fade-up"><p class="text-xs tracking-[0.15em] text-accent/50 uppercase mb-4 font-mono">▎视频剪辑与后期</p><div class="flex flex-wrap gap-3"><span class="skill-tag">After Effects</span><span class="skill-tag">Premiere Pro</span><span class="skill-tag">剪映</span><span class="skill-tag">ffmpeg</span><span class="skill-tag">GPU NVENC 加速</span><span class="skill-tag">信息流剪辑</span><span class="skill-tag">动态设计</span><span class="skill-tag">节奏设计</span></div></div>
+      <div class="mb-12" data-anim="fade-up"><p class="text-xs tracking-[0.15em] text-accent/50 uppercase mb-4 font-mono">▎AI Agent · 工具开发</p><div class="flex flex-wrap gap-3"><span class="skill-tag">Claude Code Agent</span><span class="skill-tag">Skill 开发</span><span class="skill-tag">DeepSeek API</span><span class="skill-tag">Python</span><span class="skill-tag">JavaScript</span><span class="skill-tag">tkinter GUI</span><span class="skill-tag">PyInstaller 打包</span><span class="skill-tag">Vibe Coding</span><span class="skill-tag">HTML/CSS</span></div></div>
+      <div data-anim="fade-up"><p class="text-xs tracking-[0.15em] text-accent/50 uppercase mb-4 font-mono">▎数据 · 运营 · 其他</p><div class="flex flex-wrap gap-3"><span class="skill-tag">数据分析 (Excel)</span><span class="skill-tag">SQL 基础</span><span class="skill-tag">抖音运营</span><span class="skill-tag">小红书运营</span><span class="skill-tag">广告合规</span><span class="skill-tag">英语四级</span><span class="skill-tag">C1 驾驶证</span></div></div>
+    </div>
+  </section>
+
+  <!-- ═══════════ CONTACT ═══════════ -->
+  <footer id="contact" class="relative px-6 md:px-12 py-24 md:py-32 border-t border-white/[0.04]">
+    <div class="max-w-4xl mx-auto text-center">
+      <p class="section-label" data-anim="fade-up">联系我</p>
+      <h2 class="text-3xl md:text-5xl font-bold mb-6 tracking-tight" data-anim="fade-up">一起<span class="text-accent">创造</span>点什么。</h2>
+      <p class="text-white/40 text-sm mb-12 max-w-md mx-auto" data-anim="fade-up">求职意向：游戏场景设计 / AIGC 美术实习生 / 游戏视频设计<br>一周五天 · 四个月及以上 · 随时到岗</p>
+      <div class="flex flex-wrap justify-center gap-x-8 gap-y-3 mb-12" data-anim="fade-up">
+        <a href="mailto:2782818131@qq.com" class="text-lg font-medium text-white/60 hover:text-accent transition-colors duration-300 cursor-none">📧 2782818131@qq.com</a>
+        <span class="text-white/20 hidden md:inline">|</span><span class="text-lg text-white/40">📱 13829359759</span>
+        <span class="text-white/20 hidden md:inline">|</span><span class="text-lg text-white/40">📍 广东河源</span>
+      </div>
+      <div class="flex justify-center gap-4" data-anim="fade-up">
+        <a href="https://ncn9ris1exex.feishu.cn/wiki/IR2pw5jCkilEdfkwBimciTAdnrg" target="_blank" rel="noopener" class="social-link" title="飞书作品集"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15l-4-4 1.41-1.41L11 14.17l5.59-5.59L18 10l-7 7z"/></svg></a>
+        <a href="https://github.com" target="_blank" rel="noopener" class="social-link" title="GitHub"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg></a>
+        <a href="mailto:2782818131@qq.com" class="social-link" title="邮箱"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg></a>
+      </div>
+      <p class="text-[11px] text-white/20 mt-16 tracking-wider font-mono">© 2026 丘天财 — 用心设计 · 用心构建</p>
+    </div>
+  </footer>
+
+</main>
+
+<!-- ═══════════ SCRIPTS ═══════════ -->
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" } }
+</script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
+
+<script type="module">
+import * as THREE from 'three';
+
+// ═══════════ STATE ═══════════
+let isAdmin = false;
+let works = [];
+let tools = [];
+
+const DEFAULT_TOOLS = [
+  {id:"tool1",icon:"🎬",title:"Seedance 2.0 提示词工具",desc:"创意脚本→分镜→Seedance prompt 序列，@引用语法+运镜库+锚定卡。填补方法论到 AI 视频生成的翻译层。",tags:"DeepSeek API,tkinter,12MB EXE"},
+  {id:"tool2",icon:"🧠",title:"创意方法论工具",desc:"公司 6 个 MD 方法论文件内置，6 种任务类型（脚本/拆解/分镜/BGM/复盘/案例库），AI 按方法论框架输出。",tags:"DeepSeek API,6 知识库,12MB EXE"},
+  {id:"tool3",icon:"✨",title:"丘天财-提示词优化器",desc:"三合一框架融合——7维视听语言+电影心理操控+Seedance 2.0，对话式迭代优化，不满意继续改。",tags:"DeepSeek API,4000字符 prompt,12MB EXE"},
+  {id:"tool4",icon:"✂️",title:"双击混剪 v4",desc:"GPU NVENC 加速批量混剪，BGM 分段控制+中后配对模式+水印等比缩放。RTX 4060 实测 6.5x 实时。",tags:"ffmpeg,NVENC,132MB EXE"},
+  {id:"tool5",icon:"🔗",title:"剪映桥接器",desc:"读剪映草稿 JSON→提取中贴片段→ffmpeg 拼前贴+中贴+后贴+BGM，不需切页面，不需导出中间文件。",tags:"ffmpeg,剪映草稿解析,41MB EXE"},
+  {id:"tool6",icon:"📝",title:"文案生成器 + 创意拓展器",desc:"9 触发×5 结构口播文案 + 10 触发×9 结构创意分镜，AI 优先+本地池兜底，含合规敏感词过滤。",tags:"DeepSeek API,本地池兜底,12MB×2"},
+  {id:"tool7",icon:"🖼️",title:"画面配对生成器 v2",desc:"150+物件池+AI，输入选题→输出物件→接哪类公司资产（神兽/红包/打斗）→口播第一句，一条前贴。",tags:"DeepSeek API,3 类资产,12MB EXE"},
+  {id:"tool8",icon:"📥",title:"抖音下载 + AB 去重",desc:"无水印 1080p 下载（不需登录）+ 高帧率抽帧混合去重，同段素材反复用也能过平台查重。",tags:"iesdouyin 解析,17MB+91MB"},
+  {id:"tool9",icon:"🤖",title:"Claude Agent & Skill 制作",desc:"制作多个 Claude Code Skill（创意方法论/Seedance/提示词优化），三层 AI 协作模式——人是决策者，AI 是编译器。",tags:"Claude Code,Skill 开发,Agent 编排"},
+];
+
+// ═══════════ API ═══════════
+async function api(path, opts={}) {
+  const res = await fetch(path, { headers: {'Content-Type':'application/json'}, ...opts });
+  return res.json();
+}
+
+async function fetchWorks() { works = await api('/api/works'); }
+async function fetchTools() {
+  try { tools = await api('/api/tools'); } catch(e) { tools = DEFAULT_TOOLS; }
+  if(!tools.length) tools = DEFAULT_TOOLS;
+}
+
+async function checkAdmin() {
+  const s = await api('/api/status');
+  isAdmin = s.admin;
+  updateAdminUI();
+}
+
+// ═══════════ RENDER ═══════════
+function renderWorks() {
+  const grid = document.getElementById('works-grid');
+  if(!works.length) { grid.innerHTML = '<p class="text-white/20 text-sm col-span-full text-center py-12">暂无作品，点击上方 ＋ 添加</p>'; return; }
+
+  grid.innerHTML = works.map((w,i) => `
+    <div class="work-card" data-tilt data-anim="card-rise" data-title="${w.title}" data-poster="${w.id}" data-video="${w.video||''}">
+      <div class="work-card-inner" style="position:relative">
+        <div class="card-admin-actions${isAdmin?' active':''}" data-wid="${w.id}">
+          <button onclick="event.stopPropagation();openEditModal('${w.id}','work')" title="编辑">✎</button>
+          <button class="btn-del" onclick="event.stopPropagation();deleteWork('${w.id}')" title="删除">✕</button>
+        </div>
+        <div class="work-media">
+          ${w.image ? `<img class="work-poster" src="${w.image}" alt="${w.title}" onerror="this.style.display='none'">` : `<canvas class="work-poster" data-poster="${w.id}"></canvas>`}
+          ${w.video ? `<video class="work-video" src="${w.video}" muted loop playsinline></video>` : ''}
+          <div class="work-play-icon"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="8,5 19,12 8,19"/></svg></div>
+          <div class="work-card-glow"></div>
+        </div>
+        <div class="work-info">
+          <div class="text-[10px] tracking-[0.2em] text-accent/60 uppercase mb-3 font-mono">${w.category}</div>
+          <h3 class="text-xl font-bold mb-2">${w.title}</h3>
+          <p class="text-white/40 text-sm leading-relaxed mb-4">${w.description}</p>
+          <div class="flex gap-2 flex-wrap">${w.tags.map(t=>`<span class="skill-tag text-xs">${t}</span>`).join('')}</div>
+        </div>
+      </div>
+    </div>
+  `).join('');
+
+  // Re-bind canvas posters
+  document.querySelectorAll('canvas.work-poster').forEach(c => {
+    generatePoster(c, c.dataset.poster, works.find(w=>w.id===c.dataset.poster));
+  });
+  // Re-bind hover video
+  document.querySelectorAll('.work-card').forEach(card=>{
+    const v=card.querySelector('.work-video');
+    card.addEventListener('mouseenter',()=>{if(v){v.currentTime=0;v.play().catch(()=>{});}});
+    card.addEventListener('mouseleave',()=>{if(v)v.pause();});
+  });
+  // Re-bind tilt
+  bindTilt();
+  // Re-bind detail view
+  document.querySelectorAll('.work-card').forEach(c=>{c.addEventListener('click',e=>{if(!e.target.closest('.skill-tag')&&!e.target.closest('a')&&!e.target.closest('button'))openDetail(c);});});
+  // Refresh GSAP
+  refreshAnimations();
+}
+
+function renderTools() {
+  document.getElementById('tools-grid').innerHTML = tools.map(t => `
+    <div class="tool-card" data-anim="fade-up" style="position:relative">
+      ${isAdmin ? `
+      <div style="position:absolute;top:8px;right:8px;display:flex;gap:4px;z-index:5">
+        <button onclick="event.stopPropagation();openEditModal('${t.id}','tool')" style="width:24px;height:24px;border-radius:50%;border:1px solid rgba(255,255,255,0.2);background:rgba(0,0,0,0.7);color:#ccc;font-size:10px;cursor:none" title="编辑">✎</button>
+        <button onclick="event.stopPropagation();deleteTool('${t.id}')" style="width:24px;height:24px;border-radius:50%;border:1px solid rgba(231,76,60,0.3);background:rgba(0,0,0,0.7);color:#e74c3c;font-size:10px;cursor:none" title="删除">✕</button>
+      </div>`:''}
+      <div class="tool-icon">${t.icon}</div>
+      <h3 class="font-bold mb-2 text-sm">${t.title}</h3>
+      <p class="text-white/40 text-xs leading-relaxed mb-3">${t.desc}</p>
+      <div class="flex gap-1.5 flex-wrap">${t.tags.split(',').map(tg=>`<span class="text-[10px] text-accent/50 font-mono">${tg.trim()}</span>`).join('')}</div>
+    </div>
+  `).join('');
+  refreshAnimations();
+}
+
+// ═══════════ ADMIN ═══════════
+function updateAdminUI() {
+  const btn = document.getElementById('login-btn');
+  const bar = document.getElementById('admin-bar');
+  if(isAdmin){
+    btn.classList.add('logged'); btn.title='已登录';
+    bar.classList.add('active');
+  } else {
+    btn.classList.remove('logged'); btn.title='管理登录';
+    bar.classList.remove('active');
+  }
+  renderWorks();
+  renderTools();
+}
+
+document.getElementById('login-btn').addEventListener('click',()=>{
+  if(isAdmin){ apiLogout(); return; }
+  document.getElementById('login-modal').classList.add('active');
+  document.getElementById('login-password').focus();
+});
+
+window.doLogin = async function(){
+  const pw = document.getElementById('login-password').value;
+  const res = await api('/api/login',{method:'POST',body:JSON.stringify({password:pw})});
+  if(res.ok){ isAdmin=true; updateAdminUI(); closeModal('login-modal'); document.getElementById('login-password').value=''; }
+  else { const e=document.getElementById('login-error'); e.textContent=res.error; e.style.display='block'; }
+}
+
+window.apiLogout = async function(){
+  await api('/api/logout',{method:'POST'});
+  isAdmin=false; updateAdminUI();
+}
+
+// ═══════════ WORK CRUD ═══════════
+window.openEditModal = function(id,type='work'){
+  if(type==='tool') openToolModal(id);
+  else openWorkModal(id);
+};
+
+function openWorkModal(id){
+  const modal = document.getElementById('work-modal');
+  document.getElementById('work-edit-id').value = id || '';
+  document.getElementById('work-modal-title').textContent = id ? '编辑作品' : '添加作品';
+  document.getElementById('work-save-btn').textContent = id ? '更新' : '添加';
+  if(id){
+    const w = works.find(x=>x.id===id);
+    if(w){
+      document.getElementById('work-title').value = w.title||'';
+      document.getElementById('work-category').value = w.category||'';
+      document.getElementById('work-desc').value = w.description||'';
+      document.getElementById('work-tags').value = (w.tags||[]).join(', ');
+      document.getElementById('work-color').value = w.color||'#8ab4f8';
+    }
+  } else {
+    ['work-title','work-category','work-desc','work-tags','work-color'].forEach(f=>document.getElementById(f).value='');
+    document.getElementById('work-color').value = '#8ab4f8';
+  }
+  document.getElementById('work-image').value = '';
+  document.getElementById('work-video-file').value = '';
+  document.getElementById('work-video-url').value = '';
+  modal.classList.add('active');
+}
+
+window.saveWork = async function(){
+  const id = document.getElementById('work-edit-id').value;
+  const form = new FormData();
+  form.append('title',document.getElementById('work-title').value);
+  form.append('category',document.getElementById('work-category').value);
+  form.append('description',document.getElementById('work-desc').value);
+  form.append('tags',document.getElementById('work-tags').value);
+  form.append('color',document.getElementById('work-color').value);
+  const img = document.getElementById('work-image').files[0];
+  if(img) form.append('image',img);
+  const vf = document.getElementById('work-video-file').files[0];
+  if(vf) form.append('video_file',vf);
+  const vu = document.getElementById('work-video-url').value.trim();
+  if(vu) form.append('video',vu);
+
+  const method = id ? 'PUT' : 'POST';
+  const url = id ? `/api/works/${id}` : '/api/works';
+  const res = await fetch(url,{method,body:form});
+  const data = await res.json();
+  if(data.ok){ closeModal('work-modal'); await fetchWorks(); renderWorks(); }
+  else alert(data.error||'保存失败');
+};
+
+window.deleteWork = async function(id){
+  if(!confirm('确认删除这个作品？')) return;
+  const res = await api(`/api/works/${id}`,{method:'DELETE'});
+  if(res.ok){ await fetchWorks(); renderWorks(); }
+  else alert(res.error||'删除失败');
+};
+
+// ═══════════ TOOL CRUD ═══════════
+function openToolModal(id){
+  const modal = document.getElementById('tool-modal');
+  document.getElementById('tool-edit-id').value = id || '';
+  document.getElementById('tool-modal-title').textContent = id ? '编辑工具' : '添加工具';
+  document.getElementById('tool-save-btn').textContent = id ? '更新' : '添加';
+  if(id){
+    const t = tools.find(x=>x.id===id);
+    if(t){
+      document.getElementById('tool-icon').value = t.icon||'';
+      document.getElementById('tool-title').value = t.title||'';
+      document.getElementById('tool-desc').value = t.desc||'';
+      document.getElementById('tool-tags').value = t.tags||'';
+    }
+  } else {
+    ['tool-icon','tool-title','tool-desc','tool-tags'].forEach(f=>document.getElementById(f).value='');
+  }
+  modal.classList.add('active');
+}
+
+window.saveTool = async function(){
+  const id = document.getElementById('tool-edit-id').value;
+  const data = {
+    icon: document.getElementById('tool-icon').value.trim(),
+    title: document.getElementById('tool-title').value.trim(),
+    desc: document.getElementById('tool-desc').value.trim(),
+    tags: document.getElementById('tool-tags').value.trim(),
+  };
+  if(!data.title) return alert('工具名称不能为空');
+  if(id){
+    const idx = tools.findIndex(t=>t.id===id);
+    if(idx>=0){ tools[idx] = {...tools[idx],...data}; }
+  } else {
+    data.id = 'tool' + Date.now();
+    tools.unshift(data);
+  }
+  await api('/api/tools',{method:'POST',body:JSON.stringify(tools)});
+  closeModal('tool-modal');
+  renderTools();
+};
+
+window.deleteTool = async function(id){
+  if(!confirm('确认删除这个工具？')) return;
+  tools = tools.filter(t=>t.id!==id);
+  await api('/api/tools',{method:'POST',body:JSON.stringify(tools)});
+  renderTools();
+};
+
+window.openAddModal = ()=>openWorkModal(null);
+
+// ═══════════ MODAL ═══════════
+window.closeModal = function(id){
+  document.getElementById(id).classList.remove('active');
+};
+document.querySelectorAll('.modal-overlay').forEach(m=>{
+  m.addEventListener('click',e=>{if(e.target===m) m.classList.remove('active');});
+});
+
+// ═══════════ GENERATE POSTER ═══════════
+function generatePoster(canvas, id, workData){
+  const w = canvas.parentElement.clientWidth||800;
+  const h = (w/16)*9;
+  canvas.width=w; canvas.height=h;
+  const ctx=canvas.getContext('2d');
+  ctx.fillStyle='#0d0d14'; ctx.fillRect(0,0,w,h);
+  const palettes = {blender:['#1a1040','#0d1b3e','#102040','#ff9955'],ue5:['#0a1020','#0f1628','#101a30','#ffffff'],aigc:['#100d1a','#151025','#0d1428','#a855f7'],ae:['#0f1a2e','#0d2035','#15202b','#9999ff'],ua:['#1a1020','#200d18','#1a0d20','#ff3333'],social:['#102020','#0d1a1a','#0f1a20','#00cccc']};
+  const c = workData?.color||'#8ab4f8';
+  const p = palettes[id]||['#0a0a14','#0d0d1a','#0a0e18',c];
+  const bg=ctx.createLinearGradient(0,0,w,h);
+  bg.addColorStop(0,p[0]);bg.addColorStop(0.5,p[1]);bg.addColorStop(1,p[2]);
+  ctx.fillStyle=bg;ctx.fillRect(0,0,w,h);
+  ctx.globalAlpha=0.15;
+  for(let i=0;i<8;i++){const cx=w*(0.1+Math.random()*0.8),cy=h*(0.1+Math.random()*0.8),r=Math.min(w,h)*(0.08+Math.random()*0.25);const g=ctx.createRadialGradient(cx,cy,0,cx,cy,r);g.addColorStop(0,p[3]);g.addColorStop(0.5,'rgba(138,180,248,0.08)');g.addColorStop(1,'transparent');ctx.fillStyle=g;ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fill();}
+  ctx.globalAlpha=0.06;ctx.strokeStyle='#8ab4f8';ctx.lineWidth=0.5;
+  for(let x=40;x<w;x+=40){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,h);ctx.stroke();}
+  for(let y=40;y<h;y+=40){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke();}
+  ctx.globalAlpha=0.12;const cg=ctx.createRadialGradient(w/2,h/2,0,w/2,h/2,Math.min(w,h)*0.5);cg.addColorStop(0,p[3]);cg.addColorStop(1,'transparent');ctx.fillStyle=cg;ctx.fillRect(0,0,w,h);
+  ctx.globalAlpha=0.3;ctx.fillStyle='#ffffff';
+  ctx.font=`${Math.min(w*0.03,22)}px "Inter","PingFang SC",sans-serif`;ctx.textAlign='center';
+  ctx.fillText(workData?.title||'✦  Hover to Preview',w/2,h/2+8);
+  ctx.globalAlpha=1;
+}
+
+// ═══════════ THREE.JS PARTICLES ═══════════
+const canvas3d=document.getElementById('particle-canvas');
+const renderer=new THREE.WebGLRenderer({canvas:canvas3d,antialias:true,alpha:true});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+renderer.setSize(window.innerWidth,window.innerHeight);
+const scene=new THREE.Scene();
+const camera=new THREE.PerspectiveCamera(60,window.innerWidth/window.innerHeight,0.1,100);
+camera.position.set(0,1.5,12);camera.lookAt(0,0,0);
+const COLS=120,ROWS=60,SPACING=0.15,total=COLS*ROWS;
+const geo=new THREE.BufferGeometry();
+const pos=new Float32Array(total*3),base=new Float32Array(total*3),col=new Float32Array(total*3),siz=new Float32Array(total);
+const gW=(COLS-1)*SPACING,gH=(ROWS-1)*SPACING;
+for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){const i=r*COLS+c,x=-gW/2+c*SPACING,y=-gH/2+r*SPACING;pos[i*3]=x;pos[i*3+1]=y;pos[i*3+2]=0;base[i*3]=x;base[i*3+1]=y;base[i*3+2]=0;const t_=(r/ROWS+c/COLS)*0.5;col[i*3]=0.35+t_*0.2;col[i*3+1]=0.4+t_*0.15;col[i*3+2]=0.55+t_*0.3;siz[i]=0.02+Math.random()*0.03;}
+geo.setAttribute('position',new THREE.BufferAttribute(pos,3));geo.setAttribute('color',new THREE.BufferAttribute(col,3));geo.setAttribute('size',new THREE.BufferAttribute(siz,1));
+const tc=document.createElement('canvas');tc.width=32;tc.height=32;const tctx=tc.getContext('2d');
+const grd=tctx.createRadialGradient(16,16,0,16,16,16);grd.addColorStop(0,'rgba(255,255,255,1)');grd.addColorStop(0.15,'rgba(255,255,255,0.9)');grd.addColorStop(0.4,'rgba(180,200,240,0.4)');grd.addColorStop(0.7,'rgba(100,140,200,0.05)');grd.addColorStop(1,'rgba(0,0,0,0)');tctx.fillStyle=grd;tctx.fillRect(0,0,32,32);
+const pTex=new THREE.CanvasTexture(tc);
+const mat=new THREE.PointsMaterial({size:0.06,map:pTex,vertexColors:true,blending:THREE.AdditiveBlending,depthWrite:false,depthTest:false,transparent:true,opacity:0.8});
+const pts=new THREE.Points(geo,mat);scene.add(pts);
+const dc=300;const dg=new THREE.BufferGeometry();const dp=new Float32Array(dc*3);const ds=new Float32Array(dc);
+for(let i=0;i<dc;i++){dp[i*3]=(Math.random()-0.5)*16;dp[i*3+1]=(Math.random()-0.5)*9;dp[i*3+2]=(Math.random()-0.5)*4;ds[i]=Math.random()*0.015+0.005;}
+dg.setAttribute('position',new THREE.BufferAttribute(dp,3));dg.setAttribute('size',new THREE.BufferAttribute(ds,1));
+const dm=new THREE.PointsMaterial({size:0.025,map:pTex,color:0x8ab4f8,blending:THREE.AdditiveBlending,depthWrite:false,depthTest:false,transparent:true,opacity:0.35});
+const dust=new THREE.Points(dg,dm);scene.add(dust);
+const ms={x:0,y:0,tx:0,ty:0};const m3d=new THREE.Vector3();
+document.addEventListener('mousemove',e=>{ms.tx=(e.clientX/window.innerWidth)*2-1;ms.ty=-(e.clientY/window.innerHeight)*2+1;});
+document.addEventListener('touchmove',e=>{if(e.touches.length){ms.tx=(e.touches[0].clientX/window.innerWidth)*2-1;ms.ty=-(e.touches[0].clientY/window.innerHeight)*2+1;}},{passive:true});
+const clk=new THREE.Clock();const pA=geo.attributes.position;const pArr=pA.array;
+(function anim(){const dt=Math.min(clk.getDelta(),0.1);const t_=performance.now()*0.001;ms.x+=(ms.tx-ms.x)*4*dt;ms.y+=(ms.ty-ms.y)*4*dt;m3d.set(ms.x*6,ms.y*3.5,2);
+for(let i=0;i<total;i++){const i3=i*3,bx=base[i3],by=base[i3+1];let tz=Math.sin(bx*1.8+t_*1.3)*Math.cos(by*1.4+t_*0.7)*0.25+Math.sin(bx*3.1-t_*0.9)*Math.sin(by*2.6+t_*1.1)*0.15+Math.cos((bx+by)*2.0+t_*0.5)*0.18;const dx=bx-m3d.x,dy=by-m3d.y,dist=Math.sqrt(dx*dx+dy*dy);if(dist<2.2){const f=1-dist/2.2;tz+=f*f*(3-2*f)*0.52;}pArr[i3+2]=tz;}
+pA.needsUpdate=true;dust.rotation.y+=dt*0.04;dust.rotation.x+=dt*0.02;camera.position.x+=(ms.x*0.5-camera.position.x)*1.5*dt;camera.position.y+=(1.5-ms.y*0.3-camera.position.y)*1.5*dt;camera.lookAt(0,0,0);renderer.render(scene,camera);requestAnimationFrame(anim);})();
+window.addEventListener('resize',()=>{renderer.setSize(window.innerWidth,window.innerHeight);camera.aspect=window.innerWidth/window.innerHeight;camera.updateProjectionMatrix();});
+
+// ═══════════ CURSOR ═══════════
+const ce=document.getElementById('cursor'),cd=document.getElementById('cursor-dot');
+let cx=innerWidth/2,cy=innerHeight/2,ctx_=cx,cty=cy;
+document.addEventListener('mousemove',e=>{ctx_=e.clientX;cty=e.clientY;});
+(function ac(){cx+=(ctx_-cx)*0.15;cy+=(cty-cy)*0.15;ce.style.left=cx+'px';ce.style.top=cy+'px';cd.style.left=ctx_+'px';cd.style.top=cty+'px';requestAnimationFrame(ac);})();
+
+// ═══════════ 3D TILT ═══════════
+function bindTilt(){
+  document.querySelectorAll('[data-tilt]').forEach(card=>{
+    const inner=card.querySelector('.work-card-inner');
+    card.addEventListener('mousemove',e=>{const r=card.getBoundingClientRect();const nx=((e.clientX-r.left)/r.width)*2-1,ny=((e.clientY-r.top)/r.height)*2-1;inner.style.transform=`rotateX(${-ny*12}deg) rotateY(${nx*12}deg)`;});
+    card.addEventListener('mouseleave',()=>{inner.style.transition='transform 0.7s cubic-bezier(0.25,0.8,0.25,1)';inner.style.transform='rotateX(0deg) rotateY(0deg)';setTimeout(()=>inner.style.transition='',700);});
+  });
+}
+
+// ═══════════ WORK DETAIL ═══════════
+let currentWorkId = null;
+
+async function openDetail(card){
+  currentWorkId = card.dataset.poster;
+  const w = works.find(x=>x.id===currentWorkId);
+  if(!w) return;
+
+  document.getElementById('detail-header').innerHTML = `
+    <p class="text-[10px] tracking-[0.2em] text-accent/60 uppercase mb-2 font-mono">${w.category}</p>
+    <h1 class="text-3xl md:text-4xl font-bold mb-3">${w.title}</h1>
+    <p class="text-white/40 text-sm max-w-2xl mb-3">${w.description}</p>
+    <div class="flex gap-2 flex-wrap">${w.tags.map(t=>`<span class="skill-tag text-xs">${t}</span>`).join('')}</div>
+  `;
+  document.getElementById('detail-overlay').classList.add('active');
+  document.body.classList.add('lightbox-open');
+  if(isAdmin) document.getElementById('detail-upload').style.display = 'block';
+  else document.getElementById('detail-upload').style.display = 'none';
+  await loadMedia();
+}
+
+// Drag & drop
+const dropZone = document.getElementById('detail-upload');
+if(dropZone){
+  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.style.borderColor='rgba(138,180,248,0.6)'; });
+  dropZone.addEventListener('dragleave', () => { dropZone.style.borderColor='rgba(255,255,255,0.12)'; });
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.style.borderColor='rgba(255,255,255,0.12)';
+    const input = document.getElementById('detail-file-input');
+    input.files = e.dataTransfer.files;
+    uploadMedia();
+  });
+}
+
+window.closeDetail = function(){
+  document.getElementById('detail-overlay').classList.remove('active');
+  document.body.classList.remove('lightbox-open');
+  currentWorkId = null;
+};
+
+async function loadMedia(){
+  const gallery = document.getElementById('detail-gallery');
+  gallery.innerHTML = '<p class="text-white/20 text-sm text-center col-span-full py-12">加载中...</p>';
+  const res = await api(`/api/works/${currentWorkId}/media`);
+  if(!res.length){
+    gallery.innerHTML = '<p class="text-white/15 text-sm text-center col-span-full py-16">暂无作品素材</p>';
+    return;
+  }
+  gallery.innerHTML = res.map(m => `
+    <div class="detail-media-card" onclick="openMediaLB('${m.url}','${m.type}')">
+      ${m.type==='video'
+        ? `<video src="${m.url}" muted loop playsinline onmouseenter="this.play()" onmouseleave="this.pause()"></video>`
+        : `<img src="${m.url}" alt="" loading="lazy">`
+      }
+      ${isAdmin ? `<button class="media-delete" onclick="event.stopPropagation();deleteMedia('${m.id}')" title="删除">✕</button>` : ''}
+    </div>
+  `).join('');
+}
+
+window.uploadMedia = async function(){
+  const input = document.getElementById('detail-file-input');
+  if(!input.files.length) return;
+  const form = new FormData();
+  for(const f of input.files) form.append('files', f);
+  const res = await fetch(`/api/works/${currentWorkId}/media`, {method:'POST', body:form});
+  const data = await res.json();
+  if(data.ok){ input.value=''; await loadMedia(); }
+  else alert('上传失败');
+};
+
+window.deleteMedia = async function(mediaId){
+  if(!confirm('删除这个文件？')) return;
+  const res = await api(`/api/works/${currentWorkId}/media/${mediaId}`, {method:'DELETE'});
+  if(res.ok) await loadMedia();
+};
+
+// ═══════════ SIMPLE LIGHTBOX (for detail gallery click) ═══════════
+const lb=document.getElementById('lightbox'),lbM=document.getElementById('lightbox-media'),lbT=document.getElementById('lightbox-title');
+let lbV=null;
+window.openMediaLB = function(url, type){
+  lbT.textContent = '';
+  if(type==='video'){
+    lbV=document.createElement('video');lbV.src=url;lbV.controls=true;lbV.autoplay=true;lbV.playsInline=true;
+    lbV.style.maxWidth='90vw';lbV.style.maxHeight='80vh';lbV.style.borderRadius='12px';lbV.style.outline='none';
+    lbM.innerHTML='';lbM.appendChild(lbV);
+  }else{
+    const img=document.createElement('img');img.src=url;img.style.maxWidth='90vw';img.style.maxHeight='85vh';img.style.borderRadius='12px';
+    lbM.innerHTML='';lbM.appendChild(img);lbV=null;
+  }
+  lb.classList.add('active');document.body.classList.add('lightbox-open');
+};
+function closeLB(){if(lbV){lbV.pause();lbV.removeAttribute('src');lbV.load();lbV=null;}lbM.innerHTML='';lb.classList.remove('active');document.body.classList.remove('lightbox-open');}
+document.getElementById('lightbox-close').addEventListener('click',closeLB);
+lb.addEventListener('click',e=>{if(e.target===lb)closeLB();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeLB();closeDetail();}});
+
+// ═══════════ CURSOR HOVER ═══════════
+document.querySelectorAll('a,button,.magnetic-btn,.work-card,.skill-tag,.social-link,.lightbox-close,.tool-card').forEach(el=>{el.addEventListener('mouseenter',()=>{ce.classList.add('hover');cd.classList.add('hover');});el.addEventListener('mouseleave',()=>{ce.classList.remove('hover');cd.classList.remove('hover');});});
+
+// ═══════════ GSAP ═══════════
+function refreshAnimations(){
+  gsap.set('[data-anim="fade-up"]',{opacity:0,y:24});
+  gsap.utils.toArray('[data-anim="fade-up"]').forEach(el=>{if(el.closest('#hero'))return;ScrollTrigger.create({trigger:el,start:'top bottom-=60px',onEnter:()=>gsap.to(el,{opacity:1,y:0,duration:0.8,ease:'power3.out'}),once:true});});
+  gsap.utils.toArray('[data-anim="card-rise"]').forEach((card,i)=>{const inner=card.querySelector('.work-card-inner');gsap.set(inner,{y:60,rotationX:8,rotationY:-3});gsap.to(inner,{y:0,rotationX:0,rotationY:0,duration:1,ease:'power3.out',scrollTrigger:{trigger:card,start:'top bottom-=80px',end:'top center',scrub:false},delay:i*0.08,onComplete:()=>{inner.style.transform='';}});});
+  bindTilt();
+}
+
+gsap.registerPlugin(ScrollTrigger);
+const tl=gsap.timeline({defaults:{ease:'power3.out'}});
+tl.to('.hero-title .word',{y:0,duration:1.1,stagger:0.15,delay:0.4}).to('[data-anim="fade-up"]',{opacity:1,y:0,duration:0.8,stagger:0.15},'-=0.4');
+gsap.set('[data-anim="fade-up"]',{opacity:0,y:24});
+
+document.querySelectorAll('[data-magnetic]').forEach(btn=>{btn.addEventListener('mousemove',e=>{const r=btn.getBoundingClientRect();gsap.to(btn,{x:(e.clientX-(r.left+r.width/2))*0.3,y:(e.clientY-(r.top+r.height/2))*0.3,duration:0.5,ease:'power2.out'});});btn.addEventListener('mouseleave',()=>{gsap.to(btn,{x:0,y:0,duration:0.7,ease:'elastic.out(1,0.6)'});});});
+document.querySelectorAll('a[href^="#"]').forEach(a=>{a.addEventListener('click',function(e){e.preventDefault();const t=document.querySelector(this.getAttribute('href'));if(t)t.scrollIntoView({behavior:'smooth',block:'start'});});});
+
+// ═══════════ INIT ═══════════
+async function init(){
+  await Promise.all([fetchWorks(),fetchTools(),checkAdmin()]);
+  renderWorks();
+  renderTools();
+  if(!works.length && !tools.length){ tools = DEFAULT_TOOLS; renderTools(); }
+}
+init();
+
+console.log('%c🚀 丘天财作品集已就绪 %c— 3D粒子 + 动态管理 + 10+工具链','color:#8ab4f8;font-size:14px;','color:#999;');
+</script>
+
+</body>
+</html>
