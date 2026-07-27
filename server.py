@@ -19,11 +19,18 @@ from werkzeug.utils import secure_filename
 app = Flask(__name__, static_folder='.', static_url_path='')
 app.secret_key = os.environ.get('SECRET_KEY', 'qiutiancai-portfolio-2026-secret-key-change-me')
 
+# ── 持久化存储 ──
+# Render 上文件系统是临时的 → 用 Disk 挂载路径；本地保持原位
+IS_RENDER = os.environ.get('RENDER') is not None
+DATA_ROOT = Path(os.environ.get('DATA_DIR', '/var/data' if IS_RENDER else '.'))
+if not DATA_ROOT.exists():
+    DATA_ROOT.mkdir(parents=True, exist_ok=True)
+
 # ── 配置 ──
 ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', 'qiu2026')
 ADMIN_PASSWORD_HASH = hashlib.sha256(ADMIN_PASSWORD.encode()).hexdigest()
-DATA_FILE = Path(__file__).parent / 'works.json'
-UPLOAD_DIR = Path(__file__).parent / 'uploads'
+DATA_FILE = DATA_ROOT / 'works.json'
+UPLOAD_DIR = DATA_ROOT / 'uploads'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'mp4', 'mov', 'webm'}
 MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
 
@@ -129,7 +136,7 @@ def login_required(f):
 
 
 # ── 媒体文件管理 ──
-MEDIA_DIR = Path(__file__).parent / 'media'
+MEDIA_DIR = DATA_ROOT / 'media'
 MEDIA_DIR.mkdir(exist_ok=True)
 
 ALLOWED_MEDIA = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'mp4', 'mov', 'webm'}
@@ -189,7 +196,7 @@ def api_delete_media(work_id, media_id):
 
 
 # ── 工具数据 ──
-TOOLS_FILE = Path(__file__).parent / 'tools.json'
+TOOLS_FILE = DATA_ROOT / 'tools.json'
 
 def load_tools():
     if TOOLS_FILE.exists():
@@ -421,9 +428,10 @@ def api_save_tools():
 if __name__ == '__main__':
     if not DATA_FILE.exists():
         save_works(DEFAULT_WORKS)
-    print('\n>>> 丘天财作品集服务器已启动')
-    print('    访问: http://localhost:5000')
-    print('    管理: 页面右上角 登录 (密码: qiu2026)\n')
+    print(f'\n>>> 丘天财作品集服务器已启动')
+    print(f'    数据目录: {DATA_ROOT}')
+    print(f'    访问: http://localhost:5000')
+    print(f'    管理: 页面右上角 登录 (密码: qiu2026)\n')
     port = int(os.environ.get('PORT', 5000))
     debug = os.environ.get('RENDER') is None
     app.run(host='0.0.0.0', port=port, debug=debug)
