@@ -93,29 +93,6 @@ def row_to_work(row):
 
 
 # ═══════════════════════════════════════════
-# 调试端点（排查问题后删除）
-# ═══════════════════════════════════════════
-
-@app.route('/api/debug', methods=['GET'])
-def api_debug():
-    info = {'supabase_url': SUPABASE_URL[:30] + '...' if SUPABASE_URL else 'EMPTY',
-            'key_set': bool(SUPABASE_KEY)}
-    try:
-        res = supabase.table('works').select('id', count='exact').execute()
-        info['works_count'] = res.count if hasattr(res, 'count') else len(res.data or [])
-        info['db_ok'] = True
-    except Exception as e:
-        info['db_ok'] = False
-        info['db_error'] = str(e)
-    try:
-        supabase.storage.from_(BUCKET_UPLOADS).list()
-        info['storage_ok'] = True
-    except Exception as e:
-        info['storage_ok'] = False
-        info['storage_error'] = str(e)
-    return jsonify(info)
-
-# ═══════════════════════════════════════════
 # 页面路由
 # ═══════════════════════════════════════════
 
