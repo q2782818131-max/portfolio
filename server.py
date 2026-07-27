@@ -16,6 +16,12 @@ app.secret_key = os.environ.get('SECRET_KEY', 'qiutiancai-portfolio-2026-secret-
 # ── Supabase 配置 ──
 SUPABASE_URL = os.environ.get('SUPABASE_URL', '')
 SUPABASE_KEY = os.environ.get('SUPABASE_KEY', '')  # service_role key
+
+if not SUPABASE_URL or not SUPABASE_KEY:
+    raise RuntimeError(
+        'SUPABASE_URL 或 SUPABASE_KEY 环境变量未设置！\n'
+        '在 Render → Environment 中检查这两个变量是否存在。'
+    )
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # ── 常规配置 ──
