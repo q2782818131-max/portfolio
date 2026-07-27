@@ -20,10 +20,24 @@ app = Flask(__name__, static_folder='.', static_url_path='')
 app.secret_key = os.environ.get('SECRET_KEY', 'qiutiancai-portfolio-2026-secret-key-change-me')
 
 # ── 持久化存储 ──
-# Render 上文件系统是临时的 → 用 Disk 挂载路径；本地保持原位
+# Render 上文件系统是临时的 → 优先用 Disk 挂载路径；未挂载则回退本地
 IS_RENDER = os.environ.get('RENDER') is not None
-DATA_ROOT = Path(os.environ.get('DATA_DIR', '/var/data' if IS_RENDER else '.'))
-if not DATA_ROOT.exists():
+_PERSISTENT = Path('/var/data')
+_APP_LOCAL = Path(__file__).parent / 'data'
+
+if IS_RENDER:
+    DATA_ROOT = _PERSISTENT
+    try:
+        DATA_ROOT.mkdir(parents=True, exist_ok=True)
+        # 测试是否真的可写
+        _test = DATA_ROOT / '.write_test'
+        _test.touch()
+        _test.unlink()
+    except (OSError, PermissionError):
+        DATA_ROOT = _APP_LOCAL
+        DATA_ROOT.mkdir(parents=True, exist_ok=True)
+else:
+    DATA_ROOT = _APP_LOCAL
     DATA_ROOT.mkdir(parents=True, exist_ok=True)
 
 # ── 配置 ──
